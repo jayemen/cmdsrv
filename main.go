@@ -13,10 +13,10 @@ import (
 )
 
 func parseArgs() (cmdCache *cmdutil.CmdCache, listen string, maxAge time.Duration) {
-	cmdFlag := flag.String("cmd", "", "the command name")
-	argsFlag := flag.String("args", "", "the command arguments")
-	listenFlag := flag.String("listen", ":7777", "the listen config")
-	maxAgeFlag := flag.Int("cache-time", 5, "the number of seconds the command output can be cached")
+	cmdFlag := flag.String("cmd", "", "command to execute")
+	argsFlag := flag.String("args", "", "command-line arguments")
+	listenFlag := flag.String("listen", ":7777", "listen configuration")
+	maxAgeFlag := flag.Int("cache-time", 5, "seconds the command output can be cached")
 
 	flag.Parse()
 
