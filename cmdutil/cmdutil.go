@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-// CmdCache holds a command, its arguments, its cached output, and the last time it was run.
+// CmdCache is a runnable command with cached stdout.
 type CmdCache struct {
-	last    time.Time
-	cache   []byte
 	Command string
 	Args    []string
+	last    time.Time
+	cache   []byte
 	lock    sync.Mutex
 }
 
@@ -26,7 +26,7 @@ func MakeCmdCache(command string, args ...string) *CmdCache {
 	}
 }
 
-// Run executes the configured command, returning standard output. If the last run was less than maxAge ago, then instead returns the cached result from the previous run.
+// Run gets the output of the command, using the cached value if the last run was less than maxAge ago.
 func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
 	cmd.lock.Lock()
 
@@ -52,7 +52,6 @@ func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
 
 func outputOf(cmd *exec.Cmd) ([]byte, error) {
 	reader, err := cmd.StdoutPipe()
-
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +61,6 @@ func outputOf(cmd *exec.Cmd) ([]byte, error) {
 	}
 
 	output, err := ioutil.ReadAll(reader)
-
 	if err != nil {
 		return nil, err
 	}
