@@ -31,8 +31,10 @@ func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
 	cmd.lock.Lock()
 
 	if cmd.last.Add(maxAge).After(time.Now()) {
+		cp := make([]byte, len(cmd.cache))
+		copy(cp, cmd.cache)
 		cmd.lock.Unlock()
-		return cmd.cache, nil
+		return cp, nil
 	}
 
 	cmd.lock.Unlock()
@@ -46,6 +48,8 @@ func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
 	cmd.lock.Lock()
 	cmd.last = time.Now()
 	cmd.cache = output
+	cp := make([]byte, len(cmd.cache))
+	copy(cp, cmd.cache)
 	cmd.lock.Unlock()
 	return cmd.cache, nil
 }
