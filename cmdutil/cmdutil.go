@@ -15,8 +15,8 @@ type CmdCache struct {
 }
 
 // MakeCmdCache returns a CmdCache initialized with the specified command and arguments.
-func MakeCmdCache(command string, args ...string) CmdCache {
-	return CmdCache{
+func MakeCmdCache(command string, args ...string) *CmdCache {
+	return &CmdCache{
 		last:    time.Time{},
 		Command: command,
 		Args:    args,
@@ -65,24 +65,8 @@ func outputOf(cmd *exec.Cmd) ([]byte, error) {
 	return output, nil
 }
 
-func lookPathCommand(program string, args ...string) (*exec.Cmd, error) {
-	path, err := exec.LookPath(program)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return exec.Command(path, args...), nil
-}
-
 func runCmd(program string, args ...string) ([]byte, error) {
-	cmd, err := lookPathCommand(program, args...)
-
-	if err != nil {
-		return nil, err
-	}
-
-	output, err := outputOf(cmd)
+	output, err := outputOf(exec.Command(program, args...))
 	if err != nil {
 		return nil, err
 	}
