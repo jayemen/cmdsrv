@@ -3,6 +3,7 @@ package cmdutil
 import (
 	"io/ioutil"
 	"os/exec"
+	"sync"
 	"time"
 )
 
@@ -12,6 +13,7 @@ type CmdCache struct {
 	cache   []byte
 	Command string
 	Args    []string
+	lock    sync.Mutex
 }
 
 // MakeCmdCache returns a CmdCache initialized with the specified command and arguments.
@@ -26,9 +28,14 @@ func MakeCmdCache(command string, args ...string) *CmdCache {
 
 // Run executes the configured command, returning standard output. If the last run was less than maxAge ago, then instead returns the cached result from the previous run.
 func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
+	cmd.lock.Lock()
+
 	if cmd.last.Add(maxAge).After(time.Now()) {
+		cmd.lock.Unlock()
 		return cmd.cache, nil
 	}
+
+	cmd.lock.Unlock()
 
 	output, err := runCmd(cmd.Command, cmd.Args...)
 
@@ -36,8 +43,10 @@ func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
 		return nil, err
 	}
 
+	cmd.lock.Lock()
 	cmd.last = time.Now()
 	cmd.cache = output
+	cmd.lock.Unlock()
 	return cmd.cache, nil
 }
 
