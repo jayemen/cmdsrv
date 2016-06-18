@@ -12,7 +12,7 @@ import (
 	"github.com/jayemen/cmdsrv/cmdutil"
 )
 
-func parseArgs() (cmdCache cmdutil.CmdCache, listen string, maxAge time.Duration) {
+func parseArgs() (cmdCache *cmdutil.CmdCache, listen string, maxAge time.Duration) {
 	cmdFlag := flag.String("cmd", "", "the command name")
 	argsFlag := flag.String("args", "", "the command arguments")
 	listenFlag := flag.String("listen", ":7777", "the listen config")
@@ -26,7 +26,13 @@ func parseArgs() (cmdCache cmdutil.CmdCache, listen string, maxAge time.Duration
 		os.Exit(1)
 	}
 
-	cmdCache = cmdutil.MakeCmdCache(*cmdFlag, strings.Split(*argsFlag, " ")...)
+	argSlice := []string{}
+
+	if *argsFlag != "" {
+		argSlice = strings.Split(*argsFlag, " ")
+	}
+
+	cmdCache = cmdutil.MakeCmdCache(*cmdFlag, argSlice...)
 	maxAge = time.Duration(*maxAgeFlag) * time.Second
 	listen = *listenFlag
 	return
@@ -38,6 +44,7 @@ func main() {
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		output, err := cmd.Run(maxAge)
+
 		if err != nil {
 			_, innerErr := w.Write([]byte(err.Error()))
 
