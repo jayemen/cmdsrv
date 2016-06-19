@@ -51,7 +51,7 @@ func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
 	cp := make([]byte, len(cmd.cache))
 	copy(cp, cmd.cache)
 	cmd.lock.Unlock()
-	return cmd.cache, nil
+	return cp, nil
 }
 
 func outputOf(cmd *exec.Cmd) ([]byte, error) {
