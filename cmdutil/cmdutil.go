@@ -3,7 +3,6 @@ package cmdutil
 import (
 	"io/ioutil"
 	"os/exec"
-	"sync"
 	"time"
 )
 
@@ -12,32 +11,26 @@ type CmdCache struct {
 	Command string
 	Args    []string
 	last    time.Time
+	maxAge  time.Duration
 	cache   []byte
-	lock    sync.Mutex
 }
 
 // MakeCmdCache returns a CmdCache initialized with the specified command and arguments.
-func MakeCmdCache(command string, args ...string) *CmdCache {
+func MakeCmdCache(maxAge time.Duration, command string, args ...string) *CmdCache {
 	return &CmdCache{
 		last:    time.Time{},
 		Command: command,
 		Args:    args,
+		maxAge:  maxAge,
 		cache:   nil,
 	}
 }
 
 // Run gets the output of the command, using the cached value if the last run was less than maxAge ago.
-func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
-	cmd.lock.Lock()
-
-	if cmd.last.Add(maxAge).After(time.Now()) {
-		cp := make([]byte, len(cmd.cache))
-		copy(cp, cmd.cache)
-		cmd.lock.Unlock()
-		return cp, nil
+func (cmd *CmdCache) Run() ([]byte, error) {
+	if cmd.last.Add(cmd.maxAge).After(time.Now()) {
+		return cmd.cache, nil
 	}
-
-	cmd.lock.Unlock()
 
 	output, err := runCmd(cmd.Command, cmd.Args...)
 
@@ -45,13 +38,9 @@ func (cmd *CmdCache) Run(maxAge time.Duration) ([]byte, error) {
 		return nil, err
 	}
 
-	cmd.lock.Lock()
 	cmd.last = time.Now()
 	cmd.cache = output
-	cp := make([]byte, len(cmd.cache))
-	copy(cp, cmd.cache)
-	cmd.lock.Unlock()
-	return cp, nil
+	return cmd.cache, nil
 }
 
 func outputOf(cmd *exec.Cmd) ([]byte, error) {
