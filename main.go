@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jayemen/cmdsrv/cmdutil"
+	"github.com/jayemen/cmdsrv/cacheserver"
+	"github.com/jayemen/cmdsrv/cmdcache"
 )
 
-func parseArgs() (cmdCache *cmdutil.CmdCache, listen string) {
+func parseArgs() (c *cmdcache.Cmd, listen string) {
 	cmdFlag := flag.String("cmd", "", "command to execute")
 	argsFlag := flag.String("args", "", "command-line arguments")
 	listenFlag := flag.String("listen", ":7777", "listen configuration")
@@ -33,53 +34,19 @@ func parseArgs() (cmdCache *cmdutil.CmdCache, listen string) {
 	}
 
 	maxAge := time.Duration(*maxAgeFlag) * time.Second
-	cmdCache = cmdutil.MakeCmdCache(maxAge, *cmdFlag, argSlice...)
+	c = cmdcache.New(maxAge, *cmdFlag, argSlice...)
 	listen = *listenFlag
 	return
 }
 
-type cmdResponse struct {
-	output []byte
-	err    error
-}
-
-type cmdServer struct {
-	cmd *cmdutil.CmdCache
-	ch  chan chan cmdResponse
-}
-
-func makeServer(cmd *cmdutil.CmdCache) *cmdServer {
-	server := &cmdServer{
-		cmd: cmd,
-		ch:  make(chan chan cmdResponse),
-	}
-
-	return server
-}
-
-func (s *cmdServer) start() {
-	for {
-		reply := <-s.ch
-		output, err := s.cmd.Run()
-		reply <- cmdResponse{output, err}
-	}
-}
-
-func (s *cmdServer) runCmd() (output []byte, err error) {
-	reply := make(chan cmdResponse)
-	s.ch <- reply
-	response := <-reply
-	return response.output, response.err
-}
-
 func main() {
 	cmd, listenSpec := parseArgs()
-	server := makeServer(cmd)
-	go server.start()
+	server := cacheserver.New(cmd)
+	go server.Start()
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		output, err := server.runCmd()
+		output, err := server.Run()
 
 		if err != nil {
 			_, innerErr := w.Write([]byte(err.Error()))

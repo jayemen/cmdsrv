@@ -1,4 +1,4 @@
-package cmdutil
+package cmdcache
 
 import (
 	"io/ioutil"
@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// CmdCache is a runnable command with cached stdout.
-type CmdCache struct {
+// Cmd is a runnable command with cached output.
+type Cmd struct {
 	Command string
 	Args    []string
 	last    time.Time
@@ -15,9 +15,9 @@ type CmdCache struct {
 	cache   []byte
 }
 
-// MakeCmdCache returns a CmdCache initialized with the specified command and arguments.
-func MakeCmdCache(maxAge time.Duration, command string, args ...string) *CmdCache {
-	return &CmdCache{
+// New returns a CmdCache initialized with the specified command and arguments.
+func New(maxAge time.Duration, command string, args ...string) *Cmd {
+	return &Cmd{
 		last:    time.Time{},
 		Command: command,
 		Args:    args,
@@ -27,20 +27,20 @@ func MakeCmdCache(maxAge time.Duration, command string, args ...string) *CmdCach
 }
 
 // Run gets the output of the command, using the cached value if the last run was less than maxAge ago.
-func (cmd *CmdCache) Run() ([]byte, error) {
-	if cmd.last.Add(cmd.maxAge).After(time.Now()) {
-		return cmd.cache, nil
+func (c *Cmd) Run() ([]byte, error) {
+	if c.last.Add(c.maxAge).After(time.Now()) {
+		return c.cache, nil
 	}
 
-	output, err := runCmd(cmd.Command, cmd.Args...)
+	output, err := outputOf(exec.Command(c.Command, c.Args...))
 
 	if err != nil {
 		return nil, err
 	}
 
-	cmd.last = time.Now()
-	cmd.cache = output
-	return cmd.cache, nil
+	c.last = time.Now()
+	c.cache = output
+	return c.cache, nil
 }
 
 func outputOf(cmd *exec.Cmd) ([]byte, error) {
@@ -59,15 +59,6 @@ func outputOf(cmd *exec.Cmd) ([]byte, error) {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return nil, err
-	}
-
-	return output, nil
-}
-
-func runCmd(program string, args ...string) ([]byte, error) {
-	output, err := outputOf(exec.Command(program, args...))
-	if err != nil {
 		return nil, err
 	}
 
