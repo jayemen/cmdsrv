@@ -10,7 +10,7 @@ import (
 type Cmd struct {
 	Command string
 	Args    []string
-	last    time.Time
+	lastRun time.Time
 	maxAge  time.Duration
 	cache   []byte
 }
@@ -18,9 +18,9 @@ type Cmd struct {
 // New returns a CmdCache initialized with the specified command and arguments.
 func New(maxAge time.Duration, command string, args ...string) *Cmd {
 	return &Cmd{
-		last:    time.Time{},
 		Command: command,
 		Args:    args,
+		lastRun: time.Time{},
 		maxAge:  maxAge,
 		cache:   nil,
 	}
@@ -28,7 +28,7 @@ func New(maxAge time.Duration, command string, args ...string) *Cmd {
 
 // Run gets the output of the command, using the cached value if the last run was less than maxAge ago.
 func (c *Cmd) Run() ([]byte, error) {
-	if c.last.Add(c.maxAge).After(time.Now()) {
+	if c.lastRun.Add(c.maxAge).After(time.Now()) {
 		return c.cache, nil
 	}
 
@@ -38,7 +38,7 @@ func (c *Cmd) Run() ([]byte, error) {
 		return nil, err
 	}
 
-	c.last = time.Now()
+	c.lastRun = time.Now()
 	c.cache = output
 	return c.cache, nil
 }

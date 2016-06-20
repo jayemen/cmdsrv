@@ -13,7 +13,10 @@ func TestServer(t *testing.T) {
 	cmd := cmdcache.New(1*time.Second, "echo", "-n", "this is a test")
 	server := New(cmd)
 	go server.Start()
-	output, err := server.Run()
-	util.AssertNil(err)
-	util.AssertEqual("this is a test", string(output))
+
+	for i := 0; i < 5; i++ {
+		output, err := server.Run()
+		util.AssertNil(err)
+		util.AssertEqual("this is a test", string(output))
+	}
 }
