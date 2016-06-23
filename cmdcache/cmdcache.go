@@ -1,7 +1,7 @@
 package cmdcache
 
 import (
-	"io/ioutil"
+	"bytes"
 	"os/exec"
 	"time"
 )
@@ -12,7 +12,7 @@ type Cmd struct {
 	Args    []string
 	lastRun time.Time
 	maxAge  time.Duration
-	cache   []byte
+	cache   bytes.Buffer
 }
 
 // New returns a CmdCache initialized with the specified command and arguments.
@@ -22,45 +22,48 @@ func New(maxAge time.Duration, command string, args ...string) *Cmd {
 		Args:    args,
 		lastRun: time.Time{},
 		maxAge:  maxAge,
-		cache:   nil,
+		cache:   bytes.Buffer{},
 	}
 }
 
 // Run gets the output of the command, using the cached value if the last run was less than maxAge ago.
 func (c *Cmd) Run() ([]byte, error) {
 	if c.lastRun.Add(c.maxAge).After(time.Now()) {
-		return c.cache, nil
+		return c.cache.Bytes(), nil
 	}
 
-	output, err := outputOf(exec.Command(c.Command, c.Args...))
+	err := c.refreshCache()
 
 	if err != nil {
 		return nil, err
 	}
 
 	c.lastRun = time.Now()
-	c.cache = output
-	return c.cache, nil
+	return c.cache.Bytes(), nil
 }
 
-func outputOf(cmd *exec.Cmd) ([]byte, error) {
+func (c *Cmd) refreshCache() error {
+	cmd := exec.Command(c.Command, c.Args...)
+
 	reader, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := cmd.Start(); err != nil {
-		return nil, err
+		return err
 	}
 
-	output, err := ioutil.ReadAll(reader)
+	c.cache.Reset()
+
+	_, err = c.cache.ReadFrom(reader)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return nil, err
+		return err
 	}
 
-	return output, nil
+	return nil
 }

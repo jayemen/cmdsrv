@@ -28,7 +28,9 @@ func (s *Server) Start() {
 	for {
 		reply := <-s.ch
 		output, err := s.cmd.Run()
-		reply <- response{output, err}
+		buf := make([]byte, len(output))
+		copy(buf, output)
+		reply <- response{buf, err}
 	}
 }
 
